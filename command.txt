@@ -1,0 +1,7 @@
+git add .
+git commit -m'add commit'
+git push
+
+
+git pull
+
