@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # engine.setDatabase('VnTrader_1Min_Db', 'VnTrader_Tick_Db')
 
     # 设置回测用的数据起始日期，initHours 默认值为 0
-    engine.setDataRange(datetime(2018,7,1), datetime(2019,12,31), datetime(2018,2,1))
+    engine.setDataRange(datetime(2018,6,1), datetime(2020,2,11), datetime(2018,4,15))
 
 
     # 设置产品相关参数

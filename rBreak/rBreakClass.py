@@ -26,6 +26,7 @@ class rBreakSignal():
         reversedShort = ((1-reversedPct)*pastLow + (1+reversedPct)*pastHigh)/2
         breakLong = observedShort+breakPct*(observedShort-observedLong)
         breakShort = observedLong-breakPct*(observedShort-observedLong)
+        
         return observedLong, observedShort, reversedLong, reversedShort, breakLong, breakShort
 
     def fliterVol(self, am, paraDict):
