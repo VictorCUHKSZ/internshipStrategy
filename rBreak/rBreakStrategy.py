@@ -24,7 +24,9 @@ class rBreakStrategy(OrderTemplate):
                  # signalParameter 计算信号的参数
                  'observedPct','reversedPct', 'breakPct',
                  'rangePeriod', 'sigPeriod',
+                 'trailingPct', 'nHour', 'lowVolThreshold',
                  'calTime', 'dailyPeriod',
+                 'stopControlTime', 
                 #  'trailingPct','tpTime'
                  # 低波动率过滤阈值
                 #  'volPeriod', 'lowVolThreshold',
@@ -48,7 +50,8 @@ class rBreakStrategy(OrderTemplate):
         # varialbes
         self.orderDict = {'orderLongSet':set(), 'orderShortSet': set()}
         self.lastOrderDict = {'nextExecuteTime': datetime(2000, 1, 1)}
-        
+        self.lotMultiplier=1
+
         # 打印全局信号的字典
         self.globalStatus = {}
         self.chartLog = {
@@ -121,8 +124,11 @@ class rBreakStrategy(OrderTemplate):
             if self.orderClosed(op):
                 # 在记录中删除
                 orderSet.discard(orderId)
-                # self.lastOrderDict['nextExecuteTime'] = self.currentTime + timedelta(hours=self.stopControlTime)
+                self.lastOrderDict['nextExecuteTime'] = self.currentTime + timedelta(minutes=self.stopControlTime)
     
+    def isStopControled(self):
+        return self.currentTime < self.lastOrderDict['nextExecuteTime']
+
     # 获得执行价格
     def priceExecute(self, bar):
         if bar.vtSymbol in self._tickInstance:
@@ -193,9 +199,9 @@ class rBreakStrategy(OrderTemplate):
         arrayPrepared, amTrade = self.arrayPrepared(tradePeriod)
         if arrayPrepared:
             if len(self.observedLong):
-                if amTrade.close[-1]<self.observedLong[-1]:
+                if amTrade.low[-1]<self.observedLong[-1]:
                     exitLong = 1
-                if amTrade.close[-1]>self.observedShort[-1]:
+                if amTrade.high[-1]>self.observedShort[-1]:
                     exitShort = 1
         return exitLong, exitShort
 
@@ -221,17 +227,24 @@ class rBreakStrategy(OrderTemplate):
                 self.observedLong, self.observedShort, self.reversedLong, self.reversedShort, self.breakLong, self.breakShort = self.algorithm.rBreak(amSignal, self.paraDict)
             # upRevertDn, dnRevertUp, upBreak, dnBreak
             if len(self.observedLong):
+                filterCanTrade = self.algorithm.fliterVol(amSignal, self.paraDict)
                 upRevertDn = ta.MAX(amSignal.high, self.sigPeriod)[-1]>ta.MAX(self.observedShort, self.sigPeriod)[-1]\
-                 and amTrade.close[-1]<self.reversedShort[-1] and amTrade.close[-2]>=self.reversedShort[-1]
+                 and amTrade.close[-1]<self.reversedShort[-1] and amSignal.close[-1]>=self.reversedShort[-1]
                 dnRevertUp = ta.MIN(amSignal.low, self.sigPeriod)[-1]<ta.MIN(self.observedLong, self.sigPeriod)[-1]\
-                 and amTrade.close[-1]>self.reversedLong[-1] and amTrade.close[-2]<=self.reversedLong[-1]
-                upBreak = amTrade.high[-1]>self.breakLong[-1] and amTrade.high[-2]<=self.breakLong[-1]
-                dnBreak = amTrade.low[-1]<self.breakShort[-1] and amTrade.low[-2]>=self.breakShort[-1]
+                 and amTrade.close[-1]>self.reversedLong[-1] and amSignal.close[-1]<=self.reversedLong[-1]
+
+                upBreak = amTrade.close[-1]>self.breakLong[-1] and amSignal.close[-1]<=self.breakLong[-1]
+                dnBreak = amTrade.close[-1]<self.breakShort[-1] and amSignal.close[-1]>=self.breakShort[-1]
                 
-                if dnRevertUp or upBreak:
-                    longSignal = 1
-                if upRevertDn or dnBreak:
-                    shortSignal = 1
+                if not self.isStopControled():
+                    if filterCanTrade:
+                        if dnRevertUp or upBreak:
+                            longSignal = 1
+                        if upRevertDn or dnBreak:
+                            shortSignal = 1
+                
+                self.lotMultiplier = self.algorithm.bigVolWeight(amTrade, self.paraDict)
+                
                 self.globalStatus['longSignal'] = longSignal
                 self.globalStatus['shortSignal'] = shortSignal
 
@@ -246,25 +259,29 @@ class rBreakStrategy(OrderTemplate):
 
     def entryOrder(self, bar, longSignal, shortSignal):
         buyExecute, shortExecute = self.priceExecute(bar)
+        lotSize = int(self.lot*self.lotMultiplier)
         if longSignal ==1:
             if not self.orderDict['orderLongSet']:
                 # 如果回测直接下单，如果实盘就分批下单
                 longPos = self.lot//self.orderTime
                     # for orderID in self.timeLimitOrder(ctaBase.CTAORDER_BUY, self.symbol, buyExecute, self.lot, 120).vtOrderIDs:
-                stepOrder = self.makeStepOrder(ctaBase.CTAORDER_BUY, bar.vtSymbol, buyExecute, self.lot, longPos, self.totalSecond, self.stepSecond)
+                stepOrder = self.makeStepOrder(ctaBase.CTAORDER_BUY, bar.vtSymbol, buyExecute, lotSize, longPos, self.totalSecond, self.stepSecond)
                 orderID = stepOrder.parentID
                 self.orderDict['orderLongSet'].add(orderID)
-                # op = self._orderPacks[orderID]
-                # self.setAutoExit(op, bar.close*(1-self.trailingPct),  bar.close*(1+self.tpTime*self.trailingPct))
+                op = self._orderPacks[orderID]
+                self.setAutoExit(op, bar.close*(1-self.trailingPct))
+                self.setConditionalClose(op, self.nHour*60*60)
 
         elif shortSignal ==1:
             if not self.orderDict['orderShortSet']:
                 shortPos = self.lot//self.orderTime
-                stepOrder = self.makeStepOrder(ctaBase.CTAORDER_SHORT, bar.vtSymbol, shortExecute, self.lot, shortPos, self.totalSecond, self.stepSecond)
+                stepOrder = self.makeStepOrder(ctaBase.CTAORDER_SHORT, bar.vtSymbol, shortExecute, lotSize, shortPos, self.totalSecond, self.stepSecond)
                 orderID = stepOrder.parentID                
                 self.orderDict['orderShortSet'].add(orderID)
-                # op = self._orderPacks[orderID]
-                # self.setAutoExit(op, bar.close*(1+self.trailingPct),  bar.close*(1-self.tpTime*self.trailingPct))
+                op = self._orderPacks[orderID]
+                self.setAutoExit(op, bar.close*(1+self.trailingPct))
+                self.setConditionalClose(op, self.nHour*60*60)
+
     # ----------------------------------------------------------------------
     def onOrder(self, order):
         super().onOrder(order)

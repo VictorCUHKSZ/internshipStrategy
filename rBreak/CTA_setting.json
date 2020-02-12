@@ -13,13 +13,20 @@
     "totalSecond" :30,
     "stepSecond": 5,
 
-    "rangePeriod": 16,
-    "breakPct": 0.4,
-    
-    "observedPct": 0.35,
-    "reversedPct": 0.18,
-
+    "rangePeriod": 30,
+    "breakPct": 0.3,
+    "observedPct": 0.3,
+    "reversedPct": 0.15,
     "sigPeriod": 8,
+
+    "trailingPct":0.02,
+    "nHour":30,
+    "lowVolThreshold": 0.03,
+    "stopControlTime": 60,
+
+    "bigVolPeriod": 15,
+    "bigVolThreshold": 0.025,
+    "bigMultiplier": 0.5,
 
     "calTime": 8,
     "dailyPeriod": 24

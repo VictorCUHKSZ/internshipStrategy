@@ -11,7 +11,9 @@ if __name__ == '__main__':
     from rBreakStrategy import rBreakStrategy
     # 创建回测引擎
     engine = BacktestingEngine()
-    engine.setDB_URI("mongodb://172.16.11.81:27017")
+    # engine.setDB_URI("mongodb://172.16.11.81:27017")
+    engine.setDB_URI("mongodb://localhost:27017")
+
 
     # Bar回测
     engine.setBacktestingMode(engine.BAR_MODE)
@@ -22,7 +24,7 @@ if __name__ == '__main__':
     # engine.setDatabase('VnTrader_1Min_Db', 'VnTrader_Tick_Db')
 
     # 设置回测用的数据起始日期，initHours 默认值为 0
-    engine.setDataRange(datetime(2018,6,1), datetime(2020,2,11), datetime(2018,4,15))
+    engine.setDataRange(datetime(2018,6,1), datetime(2020,2,10), datetime(2018,5,1))
 
 
     # 设置产品相关参数
