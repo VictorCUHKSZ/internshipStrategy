@@ -1,0 +1,31 @@
+[{
+    "name": "sarStrategy",
+    "className":"sarStrategy",
+    
+    "timeframeMap" :
+    {
+        "signalPeriod":"60m","tradePeriod": "1m"
+    },
+
+    "barPeriod": 600,
+    "lot": 150,
+    "orderTime":4,
+    "totalSecond" :30,
+    "stepSecond": 5,
+
+    "acceleration": 0.0008,
+    "rangePeriod": 10,
+
+    "nDay": 1,
+    "nFilter": 2,
+    "minPct": 0.0005,
+
+    "trailingPct": 0.02,
+    "nHour":30,
+    "lowVolThreshold": 0.03,
+    "stopControlTime": 60,
+
+    "bigVolPeriod": 15,
+    "bigVolThreshold": 0.025,
+    "bigMultiplier": 0.5
+}]
